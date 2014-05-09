@@ -45,6 +45,9 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.1 =
+* Added some screenshots of the plugin in action.
+
 = 1.0 =
 * Initial Release
 
