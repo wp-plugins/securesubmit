@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: Mark Hagan
-Version: 1.0.0
+Version: 1.1.0
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 
@@ -134,17 +134,26 @@ class SecureSubmit {
             $requireShipping = 'true';
         else
             $requireShipping = 'false';
-        
+
         if (isset($atts['modal']) && $atts['modal'] === 'true')
             $modal = true;
         else
             $modal = false;
-        
+
+        //Check for additional_info fields
+        $pattern = '/(^additional_info[1-9]$|additional_info$)/';
+        $attsKeys = array_keys($atts);
+        $additionalFields = preg_grep($pattern,$attsKeys);
+
+        //Check for additional Field types
+        $typePattern = '/_type$/';
+        $additionalFieldTypes = preg_grep($typePattern,$attsKeys);
+
         $productid = isset($atts['productid']) ? $atts['productid'] : '';
         $productname = isset($atts['productname']) ? $atts['productname'] : '';
         
         if (empty($productid)) {
-            $prefix = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
+            $prefix = substr(str_shuffle("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 10);
         } else {
             $prefix = $productid;
         }
@@ -158,6 +167,14 @@ class SecureSubmit {
         <script src="<?php echo plugins_url( 'js/secure.submit-1.0.2.js', __FILE__ ); ?>"></script>
         <script language="javascript" type="text/javascript">
             var requireShipping = <?php echo $requireShipping; ?>;
+
+            <?php
+            if(count($additionalFields)>0){
+                echo "var requireAdditionalInfo = true;";
+            } else {
+                echo "var requireAdditionalInfo = false;";
+            }
+            ?>
             
             jQuery.ajaxSetup({ cache: true });
             if (jQuery('#sss').length == 0)
@@ -165,8 +182,8 @@ class SecureSubmit {
         
             var trigger_button = jQuery("<div class='pay-button button-main'><a href='#Purchase' id='pay_now'><?php echo $buttonText; ?></a><div class='pay-button-border'>&nbsp;</div></div>");
             jQuery('#<?php echo $prefix; ?>_form').append(trigger_button);
-            
-            jQuery('#pay_now').bind('click', function() {
+
+            jQuery('.button-main').unbind().bind('click', function() {
                 trigger_payment();
             });
             
@@ -186,13 +203,13 @@ class SecureSubmit {
             modal_html += "</div>";
             modal_html += "<input type='hidden' name='action' id='action' value='ssd_submit_payment'/>";
             modal_html += "<input type='hidden' name='product_sku' id='product_sku' value='<?php echo $atts['productid']; ?>'/>";
-            //modal_html += "<div class='checkout-merchant-name'>" + merchant + "</div>";
+            modal_html += "<input type='hidden' name='product_id' id='product_id' value='<?php echo $atts['productid']; ?>'/>";
             modal_html += "<div class='checkout-product-name'><?php echo $atts['productname']; ?></div>";
             
             if ('<?php echo $atts['amount']; ?>' != '') {
                 modal_html += "<div class='checkout-price'>$<?php echo $atts['amount']; ?></div>";
             } else {
-                modal_html += "<div class='donation-price'>Donation Amount<br />$&nbsp;<input type='text' name='donation_amount' id='donation_amount' class='checkout-input donation-field' placeholder='100.00'></div>";
+                modal_html += "<div class='donation-price'>Dollar Amount<br />$&nbsp;<input type='text' name='donation_amount' id='donation_amount' class='checkout-input donation-field' placeholder='100.00'></div>";
             }
             
             modal_html += "</div>";
@@ -209,12 +226,47 @@ class SecureSubmit {
             billing_html += "<select name='cardholder_state' id='cardholder_state' class='checkout-input state-field'><option value='AL'>AL</option><option value='AK'>AK</option><option value='AZ'>AZ</option><option value='AR'>AR</option><option value='CA'>CA</option><option value='CO'>CO</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='DC'>DC</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IL'>IL</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MD'>MD</option><option value='MA'>MA</option><option value='MI'>MI</option><option value='MN'>MN</option><option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NV'>NV</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='NY'>NY</option><option value='NC'>NC</option><option value='ND'>ND</option><option value='OH'>OH</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='PA'>PA</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='TN'>TN</option><option value='TX'>TX</option><option value='UT'>UT</option><option value='VT'>VT</option><option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option></select>";
             billing_html += "<input type='text' name='cardholder_zip' id='cardholder_zip' class='checkout-input zip-field' placeholder='Zip'>";
             billing_html += "</div>";
-            
+
+            // Additional Info BODY
+            var additional_html = "<div id='additional_panel'>";
+            additional_html += "<div class='back-button'><a href='#billing' id='additional_back'>back</a></div>";
+            additional_html += "<div class='checkout-card-information'>Additional Information</div>";
+            additional_html += "<div style='overflow-y: auto; height: 200px;'>";
+            <?php
+                if(count($additionalFields)>0){
+                    foreach($additionalFields as $key=>$value){
+                        $field_type = "text";
+
+                        foreach ($additionalFieldTypes as $key2=>$value2) {
+                            if ($value . "_type" == $value2) {
+                                $field_type = $atts[$value2];
+                            }
+                        }
+
+                        if ($field_type == "textarea") {
+                            echo 'additional_html += "<div class=\'card-number\' ><textarea name=\''.$value.'\' id=\''.$value.'\' class=\'donation-textarea\' placeholder=\''.$atts[$value].'\'></textarea></div>";';
+                        }
+                        else if ($field_type == "dropdown") {
+                            //TODO: add dd - split on | and loop.
+                        }
+                        else
+                        {
+                            echo 'additional_html += "<div class=\'card-number\' ><input name=\''.$value.'\' type=\''.$field_type.'\' id=\''.$value.'\' class=\'checkout-input checkout-card\' placeholder=\''.$atts[$value].'\'></div>";';
+                        }
+                    }
+                }
+            ?>
+            additional_html += "</div>";
+            additional_html += "<div class='pay-button button-next'><a href='#Purchase' id='additional_next_button'>Next</a><div class='pay-button-border'>&nbsp;</div></div>";
+            additional_html += "<div class='powered_by'><img src='<?php echo plugins_url( 'assets/heart.png', __FILE__ ); ?>' /></div>";
+            additional_html += "</div>";
+
+
             // TODO: Check if this is checked to skip the shipping screen...
             if (requireShipping) {
                 billing_html += "<div class='same_shipping'><input name='shipping_same' type='checkbox' id='shipping_same'>&nbsp;<label for='shipping_same'>Shipping Same As Billing</label></div>";
             }
-            
+
             billing_html += "<div class='pay-button button-next'><a href='#Purchase' id='billing_next_button'>Next</a><div class='pay-button-border'>&nbsp;</div></div>";
             billing_html += "<div class='powered_by'><img src='<?php echo plugins_url( 'assets/heart.png', __FILE__ ); ?>' /></div>";
             billing_html += "</div>";
@@ -266,6 +318,7 @@ class SecureSubmit {
             success_html += "</div>";
             
             modal_html += billing_html;
+            modal_html += additional_html;
             modal_html += shipping_html;
             modal_html += card_html;
             modal_html += processing_html;
@@ -286,6 +339,7 @@ class SecureSubmit {
                 jQuery("#billing_panel").show();
                 
                 jQuery("#card_panel").hide();
+                jQuery("#additional_panel").hide();
                 jQuery("#shipping_panel").hide();
                 jQuery("#processing_panel").hide();
                 jQuery("#success_panel").hide();
@@ -295,8 +349,10 @@ class SecureSubmit {
                 
                 jQuery("#billing_next_button").on("click", function(event) {
                     jQuery("#billing_panel").hide();
-                    
-                    if (requireShipping) {
+
+                    if (requireAdditionalInfo){
+                        jQuery("#additional_panel").fadeIn();
+                    }else if (requireShipping) {
                         jQuery("#card_panel").hide();
                         jQuery("#shipping_panel").fadeIn();
                     } else {
@@ -304,7 +360,22 @@ class SecureSubmit {
                         jQuery("#card_panel").fadeIn();
                     }
                 });
-                
+
+                jQuery("#additional_back").on("click", function(event) {
+                    jQuery("#additional_panel").hide();
+                    jQuery("#billing_panel").fadeIn();
+                });
+
+                jQuery("#additional_next_button").on("click", function(event) {
+                    jQuery("#billing_panel").hide();
+                    jQuery("#additional_panel").hide();
+                    if(requireShipping){
+                        jQuery("#shipping_panel").fadeIn();
+                    }else{
+                        jQuery("#card_panel").fadeIn();
+                    }
+                });
+
                 jQuery("#shipping_next_button").on("click", function(event) {
                     jQuery("#billing_panel").hide();
                     jQuery("#shipping_panel").hide();
@@ -331,8 +402,13 @@ class SecureSubmit {
                         jQuery("#shipping_panel").show();
                         jQuery("#card_panel").hide();
                     } else {
-                        jQuery("#billing_panel").show();
-                        jQuery("#card_panel").hide();
+                        <?php if(count($additionalFields)>0){ ?>
+                            jQuery("#additional_panel").fadeIn();
+                            jQuery("#card_panel").hide();
+                        <?php } else { ?>
+                            jQuery("#billing_panel").fadeIn();
+                            jQuery("#card_panel").hide();
+                        <?php } ?>
                     }
                 });
                 
@@ -774,14 +850,13 @@ class SecureSubmit {
         $body = "";
         $secureToken = isset($_POST['securesubmit_token']) ? $_POST['securesubmit_token'] : '';
         $amount = isset($_POST['donation_amount']) ? $_POST['donation_amount'] : 0;
-        
+
         if ($amount === 0)
         {
-            if( !session_id())
+            if(!session_id())
                 session_start();
-                
-            $atts = get_option('secure_submit_'. $_POST['product_id']); 
-            
+
+            $atts = get_option('secure_submit_'. $_POST['product_id']);
             $amount = isset($atts['amount']) ? $atts['amount'] : 0;
             $memo = isset($atts['memo']) ? $atts['memo'] : 0;
             $productid = isset($atts['productid']) ? $atts['productid'] : 0;
@@ -827,6 +902,7 @@ class SecureSubmit {
             $shipping_city= isset($_POST['shipping_city']) ? $_POST['shipping_city'] : '';
             $shipping_state = isset($_POST['shipping_state']) ? $_POST['shipping_state'] : '';
             $shipping_zip = isset($_POST['shipping_zip']) ? $_POST['shipping_zip'] : '';
+
         } else {           
             $billing_firstname = isset($_POST['billing_firstname']) ? $_POST['billing_firstname'] : '';
             $billing_lastname = isset($_POST['billing_lastname']) ? $_POST['billing_lastname'] : '';
@@ -867,6 +943,17 @@ class SecureSubmit {
         $body .= 'City: ' . $shipping_city . '<br/>';
         $body .= 'State: ' . $shipping_state . '<br/>';
         $body .= 'Zip: ' . $shipping_zip . '<br/>';
+
+        if (isset($_POST['additional_info1']) && !empty($_POST['additional_info1'])) {
+            $body .= '<h3>Additional Information</h3>';
+            for ($i=1; $i < 100; $i++) { 
+                if (isset($_POST['additional_info' . strval($i)]) && !empty($_POST['additional_info' . strval($i)])) {
+                    $body .= 'additional_info' . strval($i) . ": " . $_POST['additional_info' . strval($i)] . '<br/>';
+                }else {
+                    break;
+                }
+            }
+        }
         
         $billing_zip = preg_replace("/[^0-9]/", "", $billing_zip);
         
@@ -918,6 +1005,6 @@ class SecureSubmit {
             die($e->getMessage());
         }
         
-        die('Your Payment was successful! Thank you.');
+        die('Your Payment was successful! Thank you.' . $body);
     }
 }
