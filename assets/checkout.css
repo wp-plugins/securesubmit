@@ -48,6 +48,15 @@
 #modal-content select {
     border: 1px solid #ccc !important;
     background: #fff !important;
+    cursor: text !important; 
+    width: 250px;
+    text-align: center;
+    color :#2b2b2b;
+}
+
+#modal-content select {
+    border: 1px solid #ccc !important;
+    background: #fff !important;
     cursor: pointer !important; 
     cursor: hand !important;
 }
