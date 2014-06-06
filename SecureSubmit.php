@@ -37,6 +37,7 @@ class SecureSubmit {
         }
 
         add_action('init', array($this, 'init'));
+        
         add_action('wp_ajax_ssd_save_options', array($this, 'save_options'));
         add_action('wp_ajax_ssd_submit_payment', array($this, 'submit_payment'));
         add_action('wp_ajax_nopriv_ssd_submit_payment', array($this, 'submit_payment'));
@@ -160,7 +161,7 @@ class SecureSubmit {
 
         update_option('secure_submit_'.$productid,$atts);
     ?>
-    
+    [raw]
     <?php if ($modal) { ?>
         <form id="<?php echo $prefix; ?>_form">
         </form>
@@ -833,8 +834,7 @@ class SecureSubmit {
             });
         })(jQuery);
     </script>
-    
-    
+    [/raw]
     <script src="<?php echo plugins_url( 'js/secure.submit-1.0.2.js', __FILE__ ); ?>"></script>
     <?php
         return ob_get_clean();
