@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: Mark Hagan
-Version: 1.1.2
+Version: 1.1.3
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 
@@ -160,9 +160,13 @@ class SecureSubmit {
         }
 
         update_option('secure_submit_'.$productid,$atts);
+
+	if (isset($atts['ignorelinebreaks']) && $atts['ignorelinebreaks'] === 'true') {
     ?>
     [raw]
-    <?php if ($modal) { ?>
+    <?php 
+	}
+	if ($modal) { ?>
         <form id="<?php echo $prefix; ?>_form">
         </form>
         <script src="<?php echo plugins_url( 'js/secure.submit-1.0.2.js', __FILE__ ); ?>"></script>
@@ -834,7 +838,9 @@ class SecureSubmit {
             });
         })(jQuery);
     </script>
+	<?php if (isset($atts['ignorelinebreaks']) && $atts['ignorelinebreaks'] === 'true') { ?>
     [/raw]
+	<?php } ?>
     <script src="<?php echo plugins_url( 'js/secure.submit-1.0.2.js', __FILE__ ); ?>"></script>
     <?php
         return ob_get_clean();
