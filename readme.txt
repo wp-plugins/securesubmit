@@ -45,10 +45,22 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
-= 1.1 =
-* Added some screenshots of the plugin in action.
+= 1.1.3 =
+* Added work around for sites running line break conversion plugins.
 
-= 1.0 =
+= 1.1.2 =
+* Added RAW tags to ignore line breaks.
+
+= 1.1.1 = 
+* Fixed multiple buttons on the same page.
+* Added dropdown as an additional option type.
+
+= 1.1.0 =
+* Added some screenshots of the plugin in action.
+* Added ability to change button text.
+* Added additional option types.
+
+= 1.0.0 =
 * Initial Release
 
 == Tag Options ==
