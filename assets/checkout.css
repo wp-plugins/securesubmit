@@ -37,6 +37,10 @@
     cursor: text !important; 
 }
 
+input[type='text'] { 
+  display: inline-block !important; 
+}
+
 #modal-content textarea {
     border: 1px solid #ccc !important;
     background: #fff !important;
