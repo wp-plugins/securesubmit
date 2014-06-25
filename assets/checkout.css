@@ -31,6 +31,10 @@
 	z-index:auto;
 }
 
+.email-reciept label {
+    display: inline-block !important;
+}
+
 #modal-content input {
     border: 1px solid #ccc !important;
     background: #fff !important;
@@ -188,9 +192,9 @@ input[type='text'] {
 
 .card-exp {
     float: left !important;
-    padding-left: 40px !important;
-    padding-bottom: 15px !important;
-    padding-right: 20px !important;
+    padding-left: 30px !important;
+    padding-bottom: 10px !important;
+    padding-right: 5px !important;
 }
 
 .checkout-exp {
@@ -299,7 +303,7 @@ input[type='text'] {
 }
 
 .city-field {
-    width: 90px !important;
+    width: 65px !important;
     margin-right: 10px !important;
 }
 
@@ -310,6 +314,7 @@ input[type='text'] {
 .state-field {
     width: 75px !important;
     margin-right: 10px !important;
+    height: 42px !important;
 }
 
 .zip-field {

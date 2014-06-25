@@ -45,6 +45,10 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.4.5 =
+* Internet Explorer 6-9 placeholder fix.
+* CSS Fix for additional style clearing.
+
 = 1.1.4 =
 * Updated styles to clear textbox attributes.
 
