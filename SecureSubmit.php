@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: Mark Hagan
-Version: 1.1.3
+Version: 1.1.5
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 
@@ -345,6 +345,16 @@ class SecureSubmit {
                
                 jQuery('#<?php echo $prefix; ?>_form').append(<?php echo $prefix; ?>_modal_html);  // there could be multiple forms, multiple buttons.
                 jQuery("#modal-background").toggleClass("active");
+
+		jQuery(function(){    
+    			if(jQuery.browser.msie && jQuery.browser.version <= 9){
+        			jQuery("[placeholder]").focus(function(){
+            				if(jQuery(this).val()==jQuery(this).attr("placeholder")) jQuery(this).val("");
+        			}).blur(function(){
+            		if(jQuery(this).val()=="") jQuery(this).val(jQuery(this).attr("placeholder"));
+        		}).blur();
+    		}});
+
                 // show the first panel (billing)
                 jQuery("#<?php echo $prefix; ?>_billing_panel").show();
                 
@@ -486,6 +496,14 @@ class SecureSubmit {
             function <?php echo $prefix; ?>_do_post() {
                 var datastring = jQuery('#<?php echo $prefix; ?>_form').serialize();
                 var url = "<?php echo admin_url('admin-ajax.php'); ?>";
+
+		if(jQuery.browser.msie && jQuery.browser.version <= 9){
+			jQuery(this).find('[placeholder]').each(function() {
+                		if (jQuery(this).val() == jQuery(this).attr("placeholder")) {
+                    			jQuery(this).val("");
+                		}
+            		});
+		}
 
                 jQuery.post(url, datastring, function(response) {
                     if (response.indexOf("successful") >= 0)
