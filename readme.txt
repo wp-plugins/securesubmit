@@ -2,7 +2,7 @@
 Contributors: markhagan
 Tags: donation, donations, payment, buy now, gateway, heartland
 Requires at least: 3.0.1
-Tested up to: 3.9
+Tested up to: 3.9.1
 Stable tag: trunk
 License: Custom
 License URI: https://github.com/SecureSubmit/magento-extension/blob/master/LICENSE
@@ -44,6 +44,18 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 4. This screenshot shows a non-modal view.
 
 == Changelog ==
+
+= 1.4.6 =
+* Allowing non-modal users to configure the header text.
+* amountdefault attribute added for default donation amounts.
+* productimage can now be set to "none".
+
+= 1.4.5 =
+* Internet Explorer 6-9 placeholder fix.
+* CSS Fix for additional style clearing.
+
+= 1.1.4 =
+* Updated styles to clear textbox attributes.
 
 = 1.1.3 =
 * Added work around for sites running line break conversion plugins.
