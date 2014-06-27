@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: Mark Hagan
-Version: 1.1.5
+Version: 1.1.6
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 
@@ -141,6 +141,11 @@ class SecureSubmit {
         else
             $modal = false;
 
+        if (isset($atts['amountdefault']) && $atts['amountdefault'] != '')
+            $amountdefault = $atts['amountdefault'];
+        else
+            $amountdefault = '100.00';
+
         //Check for additional_info fields
         $pattern = '/(^additional_info[1-9]$|additional_info$)/';
         $attsKeys = array_keys($atts);
@@ -202,7 +207,9 @@ class SecureSubmit {
             <?php echo $prefix; ?>_modal_html += "<div style='float: left;'>";
             <?php if (!isset($atts["productimage"])) { ?>
             <?php echo $prefix; ?>_modal_html += "<img src='<?php echo plugins_url( 'assets/donation.png', __FILE__ ); ?>' class='checkout-product-image'>";
-            <?php } else { ?>
+            <?php } else if($atts["productimage"] == 'none') { ?>
+            <?php echo $prefix; ?>_modal_html += "<img src='<?php echo plugins_url( 'assets/transparent.png', __FILE__ ); ?>' class='checkout-product-image'>";
+            <?php } else{ ?>
             <?php echo $prefix; ?>_modal_html += "<img src='<?php echo $atts["productimage"]; ?>' class='checkout-product-image'>";    
             <?php } ?>
             <?php echo $prefix; ?>_modal_html += "</div>";
@@ -214,7 +221,7 @@ class SecureSubmit {
             if ('<?php echo $atts['amount']; ?>' != '') {
                 <?php echo $prefix; ?>_modal_html += "<div class='checkout-price'>$<?php echo $atts['amount']; ?></div>";
             } else {
-                <?php echo $prefix; ?>_modal_html += "<div class='donation-price'>Dollar Amount<br />$&nbsp;<input type='text' name='donation_amount' id='donation_amount' class='checkout-input donation-field' placeholder='100.00'></div>";
+                <?php echo $prefix; ?>_modal_html += "<div class='donation-price'>Dollar Amount<br />$&nbsp;<input type='text' name='donation_amount' id='donation_amount' class='checkout-input donation-field' placeholder='<?php echo $amountdefault; ?>'></div>";
             }
             
             <?php echo $prefix; ?>_modal_html += "</div>";
@@ -707,7 +714,7 @@ class SecureSubmit {
     <?php } ?>
     
     <?php if (empty($productid)) { ?>
-    <h3>Donation Information</h3>
+    <h3>Card Information</h3>
     <?php } else { ?>
     <h3>Payment Information</h3>
     <?php } ?>
@@ -756,7 +763,7 @@ class SecureSubmit {
         <?php if (empty($productid)) { ?>
         <tr>
             <td>Amount:</td>
-            <td>$<input class="form-text" type="text" value="100.00" id="<?php echo $prefix; ?>_donation_amount" /></td>
+            <td>$<input class="form-text" type="text" value="<?php echo $amountdefault; ?>" id="<?php echo $prefix; ?>_donation_amount" /></td>
         </tr>
         <?php } ?>
         <tr>

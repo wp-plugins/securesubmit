@@ -45,6 +45,11 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.4.6 =
+* Allowing non-modal users to configure the header text.
+* amountdefault attribute added for default donation amounts.
+* productimage can now be set to "none".
+
 = 1.4.5 =
 * Internet Explorer 6-9 placeholder fix.
 * CSS Fix for additional style clearing.
