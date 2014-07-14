@@ -7,7 +7,12 @@ Author: Mark Hagan
 Version: 1.1.6
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
+global $jal_db_version;
+global $wpdb;
+global $table_name;
 
+$table_name = $wpdb->prefix . "securesubmit";
+$jal_db_version = "1.2.0";
 $secureSubmit = new SecureSubmit();
 
 class SecureSubmit {
@@ -41,8 +46,11 @@ class SecureSubmit {
         add_action('wp_ajax_ssd_save_options', array($this, 'save_options'));
         add_action('wp_ajax_ssd_submit_payment', array($this, 'submit_payment'));
         add_action('wp_ajax_nopriv_ssd_submit_payment', array($this, 'submit_payment'));
-        add_action('admin_menu', array($this, 'admin_menu'));
+        add_action('init', array($this, 'report_export'));
+        add_action('plugins_loaded', array($this,'jal_update_db_check'));
+        add_action('admin_menu',array($this,'securesubmit_menu'));
         add_shortcode('securesubmit', array($this, 'shortcode'));
+        register_activation_hook(__FILE__, array($this, 'jal_install'));
     }
     
     function init() {
@@ -51,17 +59,7 @@ class SecureSubmit {
         if(!session_id())
             session_start();
     }
-    
-    function admin_menu() {
-        add_options_page(
-            'SecureSubmit',
-            'SecureSubmit',
-            'manage_options',
-            'securesubmit-donations',
-            array($this, 'options_page')
-        );
-    }
-    
+
     function options_page() {
     ?>
     <script>
@@ -73,13 +71,23 @@ class SecureSubmit {
                     'action': 'ssd_save_options',
                     'secret_key': $('#ssd_secret_key').val(),
                     'public_key': $('#ssd_public_key').val(),
-                    'payment_email': $('#ssd_payment_email').val()
+                    'payment_email': $('#ssd_payment_email').val(),
+                    'from_email': $('#ssd_from_email').val(),
+                    'from_name': $('#ssd_from_name').val()
                 };
 
-                $.post(ajaxurl, data, function(response) {
-                    $('#message p').html(response);
-                    $('#message').show();
-                });
+                // If block is check to make sure the keys match each other
+                if( (data['secret_key'].match(/cert/) && data['public_key'].match(/cert/)) ||
+                    (data['secret_key'].match(/prod/) && data['public_key'].match(/prod/)) ){
+                    data['secret_key'] = $.trim(data['secret_key']);
+                    data['public_key'] = $.trim(data['public_key']);
+                    $.post(ajaxurl, data, function(response) {
+                        $('#message').html(response);
+                        $('#message').show();
+                    });
+                }else{
+                    alert("Your keys must be both cert or both production. ");
+                }
             });
         });
     })(jQuery);
@@ -106,6 +114,14 @@ class SecureSubmit {
         <table class="form-table">
             <tbody>
                 <tr>
+                    <th scope="row">From Name</th>
+                    <td><input type="text" id="ssd_from_name" class="regular-text" value="<?php echo esc_attr($this->options['from_name']); ?>" />
+                </tr>
+                <tr>
+                    <th scope="row">From Email</th>
+                    <td><input type="text" id="ssd_from_email" class="regular-text" value="<?php echo esc_attr($this->options['from_email']); ?>" />
+                </tr>
+                <tr>
                     <th scope="row">Payment Email</th>
                     <td><input type="text" id="ssd_payment_email" class="regular-text" value="<?php echo esc_attr($this->options['payment_email']); ?>" />
                 </tr>
@@ -117,7 +133,193 @@ class SecureSubmit {
     </div>
     <?php
     }
-    
+
+    function report_page(){
+        global $wpdb;
+        global $table_name;
+
+        $shipping = false;
+        $additional = false;
+
+        if($_POST['ship'] == 'on'){ $shipping = true;}
+        if($_POST['additional'] == 'on'){ $additional = true;}
+        ?>
+        <style>
+            .even{
+                background-color: #bbb;
+            }
+        </style>
+        <div class="wrap">
+        <form name="report_data" method="post" action="admin.php?page=sub-reporting">
+            <h2>SecureSubmit Reporting</h2>
+            <div id="message" class="updated hidden"><p></p></div>
+            <br>
+            <h3>Report Options</h3>
+            <input type="checkbox" name="ship" <?php if($shipping){echo 'checked="checked"'; } ?> >Include Shipping Information
+            <br>
+            <input type="checkbox" name="additional" <?php if($additional){echo 'checked="checked"'; } ?> >Include Additional Information
+            <br><br>
+            <input type="submit" class="button-primary" value="View Transactions">
+        </form>
+        <br><br>
+        <form name="export_data" method="post" action="">
+            <input type="hidden" name="export_transaction" value="true">
+            <input type="submit" class="button-primary" value="Export Transactions">
+        </form>
+
+        <?php if($_SERVER['REQUEST_METHOD'] =='POST'){
+            $transactions = $wpdb->get_results('select * from '.$table_name.' order by id desc limit 10000;' , 'ARRAY_A');
+            $count = 0;
+
+        ?>
+            <br><br><br><br>
+            <table class="widefat">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th><th>Amount</th><th>Product ID</th><th>Time</th><th>Billing Name</th>
+                        <th>Billing Address</th><th>Billing City</th><th>Billing State</th><th>Billing Zip</th><th>Billing Email</th>
+                        <?php if($shipping){ ?>
+                            <th>Shipping Name</th><th>Shipping Address</th><th>Shipping City</th><th>Shipping State</th>
+                            <th>Shipping Zip</th>
+                        <?php }
+                        if($additional){
+                            ?>
+                            <th>Additional Info 1</th><th>Additional Info 2</th><th>Additional Info 3</th>
+                            <th>Additional Info 4</th><th>Additional Info 5</th><th>Additional Info 6</th><th>Additional Info 7</th>
+                            <th>Additional Info 8</th><th>Additional Info 9</th><th>Additional Info 10</th>
+                        <?php } ?>
+                    </tr>
+                    <?php foreach($transactions as $key=>$row){
+                        if ($count % 2 == 0){
+                            echo '<tr class="even">';
+                        }else{
+                            echo '<tr class="odd">';
+                        } ?>
+                            <td><?php echo $row['transaction_id']; ?></td>
+                            <td><?php echo $row['amount']; ?></td>
+                            <td><?php echo $row['product_id']; ?></td>
+                            <td><?php echo $row['time']; ?></td>
+                            <td><?php echo $row['billing_name']; ?></td>
+                            <td><?php echo $row['billing_address']; ?></td>
+                            <td><?php echo $row['billing_city']; ?></td>
+                            <td><?php echo $row['billing_state']; ?></td>
+                            <td><?php echo $row['billing_zip']; ?></td>
+                            <td><?php echo $row['billing_email']; ?></td>
+                            <?php if($shipping){ ?>
+                                <td><?php echo $row['shipping_name']; ?></td>
+                                <td><?php echo $row['shipping_address']; ?></td>
+                                <td><?php echo $row['shipping_city']; ?></td>
+                                <td><?php echo $row['shipping_state']; ?></td>
+                                <td><?php echo $row['shipping_zip']; ?></td>
+                            <?php }
+                            if($additional){ ?>
+                                <td><?php echo $row['additional_info1']; ?></td>
+                                <td><?php echo $row['additional_info2']; ?></td>
+                                <td><?php echo $row['additional_info3']; ?></td>
+                                <td><?php echo $row['additional_info4']; ?></td>
+                                <td><?php echo $row['additional_info5']; ?></td>
+                                <td><?php echo $row['additional_info6']; ?></td>
+                                <td><?php echo $row['additional_info7']; ?></td>
+                                <td><?php echo $row['additional_info8']; ?></td>
+                                <td><?php echo $row['additional_info9']; ?></td>
+                                <td><?php echo $row['additional_info10']; ?></td>
+                            <?php } ?>
+                        </tr>
+                    <?php
+                        $count++;
+                    } ?>
+                </thead>
+            </table>
+        </div>
+        <?php
+        }
+    }
+
+    function report_export(){
+        if(isset($_POST['export_transaction'])){
+            global $wpdb;
+            global $table_name;
+
+            $siteName = sanitize_key( get_bloginfo( 'name' ) );
+            if ( ! empty( $siteName ) )
+                $siteName .= '.';
+            $fileName = $siteName . 'users.' . date( 'Y-m-d-H-i-s' ) . '.csv';
+
+
+            header( 'Content-Description: File Transfer' );
+            header( 'Content-Disposition: attachment; filename=' . $fileName );
+            header( 'Content-Type: text/csv; charset=' . get_option( 'blog_charset' ), true );
+
+            $fields = array(
+                'transaction_id','amount','product_id','time','billing_name','billing_address','billing_city',
+                'billing_state','billing_zip','billing_email','shipping_name','shipping_address','shipping_city',
+                'shipping_state','shipping_zip','additional_info1','additional_info2','additional_info3',
+                'additional_info4','additional_info5','additional_info6','additional_info7',
+                'additional_info8','additional_info9','additional_info10');
+
+
+            $transactions = $wpdb->get_results('select * from '.$table_name.' order by id desc;' , 'ARRAY_A');
+
+            $headers = array();
+            foreach ( $fields as $key => $field ) {
+              $headers[] = '"' . strtolower( $field ) . '"';
+            }
+            echo implode( ',', $headers ) . "\n";
+            foreach ( $transactions as $transaction ) {
+                $data = array();
+                foreach ( $fields as $field ) {
+                  $value = isset( $transaction[$field] ) ? $transaction[$field] : '';
+                  $value = is_array( $value ) ? serialize( $value ) : $value;
+                  $data[] = '"' . str_replace( '"', '""', $value ) . '"';
+                }
+                echo implode( ',', $data ) . "\n";
+            }
+
+            exit;
+        }
+    }
+
+    function faq_page(){
+        ?>
+        <div class="wrap">
+            <h2>SecureSubmit FAQ</h2>
+            <div id="message" class="updated hidden"><p></p></div>
+
+            <br><br><br>
+            <h2>How do I get started?</h2>
+                <p>The default usage for SecureSubmit is as easy as putting the following in any page or post.</p>
+                <pre>[securesubmit modal='true']</pre>
+                <p> This will create a "Make Donation" button on the page. Which when clicked will open a modal window.<br>
+                    Where the user can input their info and process the payment.</p>
+            <br>
+            <h2>I don't want to do a donation. How do I change the button text?</h2>
+                <p>To change the button text you just add the field 'buttontext' to your setup and give it a value as follows.</p>
+                <pre>[securesubmit modal='true' buttontext='Pay Now']</pre>
+
+            <br>
+            <h2>I need to collect extra information. How do I do that?</h2>
+                <p>The plugin allows you to collect up to 10 additional fields of information. The field names are additional_info1 additional_info2 and so on.<br>
+                    For the value just set the name of the field. The information collected will be included in the email you receive and will be stored on your server
+                    for later retrieval.</p>
+                <pre>[securesubmit modal='true' additional_info1='Invoice Number' additional_info2='messagebox']</pre>
+
+            <br>
+            <h2>Can I set a default value other than $100?</h2>
+                <p>Yes you can. Just add the attribute "amountdefault" and set the value equal to the amount you would like to see.</p>
+                <pre>[securesubmit modal='true' additional_info1='Invoice Number' additional_info2='messagebox' buttontext='Pay Now' amountdefault='25.00']</pre>
+        </div>
+        <?php
+    }
+
+    function securesubmit_menu(){
+        add_menu_page('Settings', 'SecureSubmit','manage_securesubmit','securesubmit',
+            null, 'dashicons-shield-alt', 66);
+
+        add_submenu_page( 'securesubmit' , 'Settings', 'Settings', 'manage_options', 'sub-settings',array($this,'options_page'));
+        add_submenu_page( 'securesubmit' , 'Reportings', 'Reporting', 'manage_options', 'sub-reporting',array($this,'report_page'));
+        add_submenu_page( 'securesubmit' , 'FAQ', 'FAQ', 'manage_options', 'sub-faq',array($this,'faq_page'));
+    }
+
     function shortcode($atts) {
         ob_start();
         
@@ -174,7 +376,7 @@ class SecureSubmit {
 	if ($modal) { ?>
         <form id="<?php echo $prefix; ?>_form">
         </form>
-        <script src="<?php echo plugins_url( 'js/secure.submit-1.0.2.js', __FILE__ ); ?>"></script>
+        <script src="<?php echo plugins_url( 'js/secure.submit-1.1.0.js', __FILE__ ); ?>"></script>
         <script language="javascript" type="text/javascript">
             var <?php echo $prefix; ?>_requireShipping = <?php echo $requireShipping; ?>;
 
@@ -353,14 +555,14 @@ class SecureSubmit {
                 jQuery('#<?php echo $prefix; ?>_form').append(<?php echo $prefix; ?>_modal_html);  // there could be multiple forms, multiple buttons.
                 jQuery("#modal-background").toggleClass("active");
 
-		jQuery(function(){    
-    			if(jQuery.browser.msie && jQuery.browser.version <= 9){
-        			jQuery("[placeholder]").focus(function(){
-            				if(jQuery(this).val()==jQuery(this).attr("placeholder")) jQuery(this).val("");
-        			}).blur(function(){
-            		if(jQuery(this).val()=="") jQuery(this).val(jQuery(this).attr("placeholder"));
-        		}).blur();
-    		}});
+                jQuery(function(){    
+        			if(jQuery.browser.msie && jQuery.browser.version <= 9){
+            			jQuery("[placeholder]").focus(function(){
+                				if(jQuery(this).val()==jQuery(this).attr("placeholder")) jQuery(this).val("");
+            			}).blur(function(){
+                		if(jQuery(this).val()=="") jQuery(this).val(jQuery(this).attr("placeholder"));
+            		}).blur();
+                }});
 
                 // show the first panel (billing)
                 jQuery("#<?php echo $prefix; ?>_billing_panel").show();
@@ -410,6 +612,8 @@ class SecureSubmit {
                 });
                 
                 jQuery("#<?php echo $prefix; ?>_retry_button").on("click", function(event) {
+                    jQuery('.donation-price').show();
+                    jQuery('.checkout-price').show();
                     jQuery("#<?php echo $prefix; ?>_failure_panel").hide();
                     jQuery("#<?php echo $prefix; ?>_card_panel").fadeIn();
                 });
@@ -440,6 +644,13 @@ class SecureSubmit {
                 });
                 
                 jQuery("#<?php echo $prefix; ?>_pay_button").on("click", function(event) {
+                    if (!jQuery('#donation_amount').val()) {
+                        jQuery('#donation_amount').val(jQuery('#donation_amount').attr('placeholder'));
+                    }
+
+                    jQuery('.donation-price').hide();
+                    jQuery('.checkout-price').hide();
+
                     jQuery("#<?php echo $prefix; ?>_card_panel").hide();
                     jQuery("#<?php echo $prefix; ?>_processing_panel").show();
                     jQuery("#modal-launcher, #modal-background, .modal-close").unbind('click');
@@ -876,6 +1087,8 @@ class SecureSubmit {
             'secret_key' => $_POST['secret_key'],
             'public_key' => $_POST['public_key'],
             'payment_email' => $_POST['payment_email'],
+            'from_email' => $_POST['from_email'],
+            'from_name' => $_POST['from_name'],
         );
         update_option('securesubmit_options', $data);
         echo 'Settings saved.';
@@ -883,6 +1096,9 @@ class SecureSubmit {
     }
     
     function submit_payment() {
+        global $wpdb;
+        global $table_name;
+
         $body = "";
         $secureToken = isset($_POST['securesubmit_token']) ? $_POST['securesubmit_token'] : '';
         $amount = isset($_POST['donation_amount']) ? $_POST['donation_amount'] : 0;
@@ -897,7 +1113,7 @@ class SecureSubmit {
             $memo = isset($atts['memo']) ? $atts['memo'] : 0;
             $productid = isset($atts['productid']) ? $atts['productid'] : 0;
             $productname = isset($atts['productname']) ? $atts['productname'] : 0;
-        }
+	   }
         
         $body .= 'Thank you for your payment of $' . $amount . '!';
         if (!empty($productname)) {
@@ -1032,15 +1248,107 @@ class SecureSubmit {
                 
             add_filter('wp_mail_content_type', create_function('', 'return "text/html"; '));
             wp_mail(esc_attr($this->options['payment_email']), 'SecureSubmit $' . $amount . ' Payment Received', $body );
-            
+
             if (isset($_POST["email_reciept"]) && isset($_POST["email_address"])) {
-                wp_mail(esc_attr($_POST["email_address"]), 'Payment for $' . $amount . ' Received', $body );
+                if($this->options['from_name']){
+                    $fromAddress = esc_attr($this->options['from_email']);
+                    $fromName = esc_attr($this->options['from_name']);
+                    $header = 'From: "' . $fromName . '" <'.$fromAddress.'>'."\r\n";
+                    wp_mail(esc_attr($_POST["email_address"]), 'Payment for $' . $amount . ' Received', $body,$header);
+                }else{
+                    wp_mail(esc_attr($_POST["email_address"]), 'Payment for $' . $amount . ' Received', $body);
+                }
             }
-            
+
+            // Save to Data Base
+            $transaction_id = $response->transactionId;
+
+            $insert_array = array();
+            $insert_array['time']               = current_time('mysql');
+            $insert_array['billing_name']       = $billing_firstname . ' ' . $billing_lastname;
+            $insert_array['billing_address']    = $billing_address;
+            $insert_array['billing_city']       = $billing_city;
+            $insert_array['billing_state']      = $billing_state;
+            $insert_array['billing_zip']        = $billing_zip;
+            $insert_array['billing_email']      = $billing_email;
+            $insert_array['shipping_name']      = $shipping_firstname . ' ' . $shipping_lastname;
+            $insert_array['shipping_address']   = $shipping_address;
+            $insert_array['shipping_city']      = $shipping_city;
+            $insert_array['shipping_state']     = $shipping_state;
+            $insert_array['shipping_zip']       = $shipping_zip;
+            $insert_array['product_id']         = $productid;
+            $insert_array['amount']             = $amount;
+            $insert_array['transaction_id']     = $transaction_id;
+
+            if (isset($_POST['additional_info1']) && !empty($_POST['additional_info1'])) {
+               for ($i=1; $i < 100; $i++) {
+                    if (isset($_POST['additional_info' . strval($i)]) && !empty($_POST['additional_info' . strval($i)])) {
+                        $insert_array['additional_info' . strval($i)] = $_POST['additional_info' . strval($i)];
+                    }else {
+                        break;
+                    }
+                }
+            }
+
+            $rows_affected = $wpdb->insert($table_name, $insert_array);
+
         } catch (HpsException $e) {
             die($e->getMessage());
         }
         
         die('Your Payment was successful! Thank you.' . $body);
+    }
+
+    function jal_install(){
+        global $wpdb;
+        global $jal_db_version;
+        global $table_name;
+
+        $installed_ver = $this->options['jal_db_version'];
+
+        if($installed_ver != $jal_db_version){
+        $sql = "CREATE TABLE $table_name (
+            id bigint NOT NULL AUTO_INCREMENT,
+            product_id varchar(255) NOT NULL,
+            amount varchar(255) NOT NULL,
+            transaction_id int NOT NULL,
+            time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+            billing_name varchar(255) NOT NULL,
+            billing_address varchar(255) NOT NULL,
+            billing_city varchar(255) NOT NULL,
+            billing_state varchar(255) NOT NULL,
+            billing_zip  varchar(255) NOT NULL,
+            billing_email varchar(255) NOT NULL,
+            shipping_name varchar(255) NOT NULL,
+            shipping_address varchar(255) NOT NULL,
+            shipping_city varchar(255) NOT NULL,
+            shipping_state varchar(255) NOT NULL,
+            shipping_zip varchar(255) NOT NULL,
+            additional_info1 varchar(255) NOT NULL,
+            additional_info2 varchar(255) NOT NULL,
+            additional_info3 varchar(255) NOT NULL,
+            additional_info4 varchar(255) NOT NULL,
+            additional_info5 varchar(255) NOT NULL,
+            additional_info6 varchar(255) NOT NULL,
+            additional_info7 varchar(255) NOT NULL,
+            additional_info8 varchar(255) NOT NULL,
+            additional_info9 varchar(255) NOT NULL,
+            additional_info10 varchar(255) NOT NULL,
+            UNIQUE  KEY id (id)
+           );";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        update_option( "jal_db_version", $jal_db_version);
+
+        }
+    }
+
+    function jal_update_db_check(){
+        global $jal_db_version;
+        if (get_site_option( 'jal_db_version' ) != $jal_db_version){
+            $this->jal_install();
+        }
     }
 }

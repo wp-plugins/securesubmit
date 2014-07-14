@@ -45,12 +45,21 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
-= 1.4.6 =
+= 1.2.0 =
+* Added Admin view of transactions.
+* Default amount can now be modified.
+* FAQ section added to admin.
+* Plugin now has a side menu option in the admin.
+* Hiding amount fields after submission of payment.
+* Upgraded version of jQuery tokenization library.
+* From email address is now configurable from settings.
+
+= 1.1.6 =
 * Allowing non-modal users to configure the header text.
 * amountdefault attribute added for default donation amounts.
 * productimage can now be set to "none".
 
-= 1.4.5 =
+= 1.1.5 =
 * Internet Explorer 6-9 placeholder fix.
 * CSS Fix for additional style clearing.
 
