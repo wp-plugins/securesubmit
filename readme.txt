@@ -45,6 +45,9 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.2.2 =
+* Updated payment email to use configurable settings.
+
 = 1.2.1 =
 * Updated version of DB
 
