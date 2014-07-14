@@ -45,6 +45,9 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.2.1 =
+* Updated version of DB
+
 = 1.2.0 =
 * Added Admin view of transactions.
 * Default amount can now be modified.
