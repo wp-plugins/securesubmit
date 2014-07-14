@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: Mark Hagan
-Version: 1.2.1
+Version: 1.2.2
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 global $jal_db_version;
@@ -1247,15 +1247,16 @@ class SecureSubmit {
                 $details);
                 
             add_filter('wp_mail_content_type', create_function('', 'return "text/html"; '));
-            wp_mail(esc_attr($this->options['payment_email']), 'SecureSubmit $' . $amount . ' Payment Received', $body );
 
             if (isset($_POST["email_reciept"]) && isset($_POST["email_address"])) {
                 if($this->options['from_name']){
                     $fromAddress = esc_attr($this->options['from_email']);
                     $fromName = esc_attr($this->options['from_name']);
                     $header = 'From: "' . $fromName . '" <'.$fromAddress.'>'."\r\n";
+                    wp_mail(esc_attr($this->options['payment_email']), 'SecureSubmit $' . $amount . ' Payment Received', $body, $header );
                     wp_mail(esc_attr($_POST["email_address"]), 'Payment for $' . $amount . ' Received', $body,$header);
                 }else{
+                    wp_mail(esc_attr($this->options['payment_email']), 'SecureSubmit $' . $amount . ' Payment Received', $body );
                     wp_mail(esc_attr($_POST["email_address"]), 'Payment for $' . $amount . ' Received', $body);
                 }
             }
