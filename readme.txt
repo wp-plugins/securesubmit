@@ -45,6 +45,9 @@ Get your Certification (Dev) API keys by creating an account by [Clicking Here](
 
 == Changelog ==
 
+= 1.3.3 =
+* Adding/removing missed files from previous release
+
 = 1.3.2 =
 * Ensure SDK isn't already loaded
 
