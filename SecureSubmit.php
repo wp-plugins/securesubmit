@@ -4,7 +4,7 @@ Plugin Name: WP SecureSubmit
 Plugin URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 Description: Heartland Payment Systems SecureSubmit Plugin
 Author: SecureSubmit
-Version: 1.3.10
+Version: 1.4.0
 Author URI: https://developer.heartlandpaymentsystems.com/SecureSubmit
 */
 global $jal_db_version;
@@ -23,7 +23,7 @@ class SecureSubmit {
     function __construct() {
         $this->dir = (string) dirname(__FILE__);
 
-        if ( ! class_exists('HpsConfiguration' ) ) {
+        if ( ! class_exists('HpsServicesConfig' ) ) {
             require_once($this->dir . '/lib/Hps.php');
         }
 
@@ -1577,13 +1577,13 @@ class SecureSubmit {
         $billing_zip = preg_replace("/[^a-zA-Z0-9]/", "", $billing_zip);
 
         try {
-            $config = new HpsConfiguration();
+            $config = new HpsServicesConfig();
 
             $config->secretApiKey = esc_attr($skey);
             $config->versionNumber = '1648';
             $config->developerId = '002914';
 
-            $chargeService = new HpsChargeService($config);
+            $chargeService = new HpsCreditService($config);
 
             $address = new HpsAddress();
             $address->address = $billing_address;
